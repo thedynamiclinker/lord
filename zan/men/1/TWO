@@ -1,0 +1,1 @@
+`two [FILE ...]` runs TWO files in the current directory. Each starts with `#!lord OPERATION` and has numbered targets with one indented implementation line apiece. The file defaults to `TWO`. See [[two]] and [[know]].

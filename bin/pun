@@ -1,0 +1,46 @@
+#!/bin/sh
+
+pun_path() (
+    parents=false
+    while [ "$#" -gt 0 ]; do
+        case $1 in
+            -p|--parents) parents=true ;;
+            -h|--help)
+                printf '%s\n' 'usage: pun [-p|--parents]' \
+                    'Source this file to define a shell function that changes your directory.' \
+                    'As an executable, pun prints the destination for cd.'
+                exit 0 ;;
+            *) printf 'pun: unexpected argument: %s\n' "$1" >&2; exit 2 ;;
+        esac
+        shift
+    done
+
+    cwd=$(pwd -L) || exit
+    case $cwd in
+        /root) target=/ ;;
+        /root/*) target=${cwd#/root} ;;
+        *)
+            target=/root${cwd%/}
+            if "$parents" && [ ! -d "$target" ]; then
+                mkdir -p -- "$target" || exit
+            fi ;;
+    esac
+    if [ ! -d "$target" ]; then
+        printf 'pun: no such directory: %s\n' "$target" >&2
+        exit 1
+    fi
+    printf '%s\n' "$target"
+)
+
+pun() {
+    local target
+    target=$(pun_path "$@") || return
+    case $target in
+        /*) cd -- "$target" ;;
+        *) printf '%s\n' "$target" ;;
+    esac
+}
+
+if [ "${0##*/}" = pun ]; then
+    pun_path "$@"
+fi

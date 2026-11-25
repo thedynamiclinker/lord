@@ -5,8 +5,8 @@ runner=${0##*/}
 case "$runner" in
     law) effort=none ;;
     lawd) effort=low ;;
-    lord) effort=medium ;;
-    lordey) effort=high ;;
+    lord|edn) effort=medium ;;
+    lorde|lordey|lordy) effort=high ;;
     lordjesus) effort=xhigh ;;
     lordhavemercy) effort=xhigh ;;
     lordgodelmighty) effort=xhigh ;;

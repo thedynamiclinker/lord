@@ -1,0 +1,138 @@
+#!/usr/bin/env python3
+import argparse
+import os
+from pathlib import Path
+import re
+import subprocess
+import sys
+
+
+BINDIR = Path(__file__).resolve().parent
+HEADER = re.compile(r"#!lord[ \t]+(\S.*)")
+RECORD = re.compile(r"(?:[0-9]+|[IVXLCDM]+)\.[ \t]+(\S.*)")
+
+
+def read(source):
+    return sys.stdin.buffer.read() if source == "-" else Path(source).read_bytes()
+
+
+def parse(source, data, limit=None):
+    lines = [line.removesuffix("\r") for line in data.decode("utf-8").split("\n")]
+    for number, line in enumerate(lines, 1):
+        if limit is not None and len(line) > limit:
+            raise ValueError(f"{source}:{number}: {len(line)} characters exceeds len={limit}")
+    heading = HEADER.fullmatch(lines[0])
+    if not heading:
+        raise ValueError(f"{source}:1: expected #!lord followed by an operation")
+
+    records = []
+    index = 1
+    while index < len(lines):
+        line = lines[index]
+        index += 1
+        if not line.strip():
+            continue
+        record = RECORD.fullmatch(line)
+        if not record:
+            raise ValueError(f"{source}:{index}: expected a numbered record")
+        if index == len(lines) or not lines[index].startswith((" ", "\t")) or not lines[index].strip():
+            raise ValueError(f"{source}:{index + 1}: expected an indented implementation")
+        target = record[1].removeprefix("make ").rstrip().removesuffix(":")
+        if not target.strip():
+            raise ValueError(f"{source}:{index}: expected a record target")
+        records.append((Path(target), lines[index].lstrip(" \t")))
+        index += 1
+    if not records:
+        raise ValueError(f"{source}: expected at least one record")
+    return heading[1], records
+
+
+def run(sources):
+    config = Path(os.environ.get("TWO_CONFIG", BINDIR.parent / "etc/two"))
+    options = {}
+    for number, line in enumerate(read(config).decode("utf-8").splitlines(), 1):
+        line = line.strip()
+        if not line or line.startswith("#"):
+            continue
+        name, equals, value = line.partition("=")
+        if not equals or name.strip() not in ("len", "log"):
+            raise ValueError(f"{config}:{number}: expected len=VALUE or log=VALUE")
+        options[name.strip()] = value.strip()
+    length = options.get("len", "160")
+    if not re.fullmatch(r"[1-9][0-9]*", length):
+        raise ValueError(f"{config}: len must be a positive integer")
+    runner = options.get("log", "lordhavemercy")
+    if not re.fullmatch(r"[a-zA-Z][a-zA-Z0-9_-]*", runner) or not (BINDIR / runner).is_file():
+        raise ValueError(f"{config}: unknown lord runner {runner!r}")
+    if (BINDIR / runner).resolve() != BINDIR / "lord":
+        raise ValueError(f"{config}: {runner!r} is not a lord runner")
+
+    programs = []
+    for source in sources:
+        data = read(source)
+        operation, _ = parse(source, data, int(length))
+        programs.append((operation, data))
+    for operation, data in programs:
+        status = subprocess.run(
+            [BINDIR / runner, "--permission", "write", "--", operation],
+            input=data,
+        ).returncode
+        if status:
+            return status if status > 0 else 128 - status
+    return 0
+
+
+def show(sources):
+    for source in sources:
+        path = Path(os.path.abspath(source))
+        if source == "-":
+            spec = source
+            target = Path(".")
+        else:
+            spec = path
+            target = Path(".")
+            if path.is_file():
+                with path.open("rb") as stream:
+                    is_spec = stream.read(6) == b"#!lord"
+            else:
+                is_spec = False
+            if not is_spec:
+                for directory in (path, *path.parents):
+                    spec = directory / "TWO"
+                    if spec.is_file():
+                        target = path.relative_to(directory)
+                        break
+                else:
+                    raise ValueError(f"{source}: no TWO file found")
+
+        _, records = parse(spec, read(spec))
+        matches = [
+            (name.name, implementation)
+            for name, implementation in records
+            if name.is_relative_to(target)
+        ]
+        if not matches:
+            raise ValueError(f"{source}: no matching TWO record")
+        for name, implementation in matches:
+            print(name, implementation, sep="\t")
+    return 0
+
+
+def main():
+    name = Path(sys.argv[0]).name
+    execute = name == "two"
+    parser = argparse.ArgumentParser(prog=name)
+    parser.add_argument(
+        "sources", nargs="*", metavar="FILE" if execute else "PATH",
+        help="use - for stdin (default: TWO)" if execute else "use - for stdin (default: .)",
+    )
+    sources = parser.parse_args().sources
+    try:
+        return run(sources or ["TWO"]) if execute else show(sources or ["."])
+    except (OSError, ValueError) as error:
+        print(f"{name}: {error}", file=sys.stderr)
+        return 1
+
+
+if __name__ == "__main__":
+    sys.exit(main())

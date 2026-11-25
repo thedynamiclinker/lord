@@ -1,0 +1,101 @@
+#!/usr/bin/env python3
+import argparse
+import curses
+import os
+from pathlib import Path
+import re
+import sys
+import textwrap
+
+
+PAGES = Path(__file__).resolve().parent.parent / "zan/men"
+SECTIONS = tuple(str(number) for number in range(1, 10))
+LINK = re.compile(r"\[\[([^\]|]+)(?:\|([^\]]+))?\]\]")
+
+
+def find_page(name, section=None):
+    if name in ("", ".", "..") or "/" in name:
+        raise ValueError(f"invalid page name: {name!r}")
+    for candidate in (section,) if section else SECTIONS:
+        page = PAGES / candidate / name
+        if page.is_file():
+            return page
+    raise ValueError(f"no page for {name}" if section is None else f"no page for {name}({section})")
+
+
+def read_page(page):
+    return page.read_text(encoding="utf-8")
+
+
+def browse(screen, page, text):
+    history = []
+    offset = selected = 0
+    message = ""
+    while True:
+        links = LINK.findall(text)
+        height, width = screen.getmaxyx()
+        columns = max(1, width - 1)
+        rows = height - 1
+        lines = [
+            line for paragraph in text.splitlines()
+            for line in (textwrap.wrap(paragraph, columns) or [""])
+        ]
+        offset = min(max(0, offset), max(0, len(lines) - rows))
+        screen.erase()
+        for row, line in enumerate(lines[offset:offset + rows]):
+            screen.addnstr(row, 0, line, columns)
+        footer = f"{page.name}({page.parent.name})  q quit"
+        if history:
+            footer += "  ← back"
+        if links:
+            target, label = links[selected]
+            footer += f"  Tab next  Ctrl+] {label or target}"
+        if width > 1:
+            screen.addnstr(rows, 0, message or footer, columns, curses.A_REVERSE)
+        key = screen.getch()
+        message = ""
+        if key in (ord("q"), 27):
+            return
+        if key in (curses.KEY_DOWN, ord("j")):
+            offset += 1
+        elif key in (curses.KEY_UP, ord("k")):
+            offset -= 1
+        elif key == curses.KEY_NPAGE:
+            offset += rows
+        elif key == curses.KEY_PPAGE:
+            offset -= rows
+        elif key == 9 and links:
+            selected = (selected + 1) % len(links)
+        elif key == 29 and links:
+            try:
+                destination = find_page(target)
+                contents = read_page(destination)
+            except (OSError, ValueError) as error:
+                message = str(error)
+            else:
+                history.append((page, text, offset, selected))
+                page, text, offset, selected = destination, contents, 0, 0
+        elif key in (curses.KEY_LEFT, curses.KEY_BACKSPACE, 127) and history:
+            page, text, offset, selected = history.pop()
+
+
+def main():
+    parser = argparse.ArgumentParser(usage="men [SECTION] PAGE")
+    parser.add_argument("section", nargs="?", choices=SECTIONS)
+    parser.add_argument("page")
+    args = parser.parse_args()
+    try:
+        page = find_page(args.page, args.section)
+        text = read_page(page)
+        if sys.stdin.isatty() and sys.stdout.isatty() and os.environ.get("TERM") not in (None, "", "dumb"):
+            curses.wrapper(browse, page, text)
+        else:
+            sys.stdout.write(text)
+    except (OSError, ValueError, curses.error) as error:
+        print(f"men: {error}", file=sys.stderr)
+        return 1
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

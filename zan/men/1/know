@@ -1,0 +1,1 @@
+`know .` lists the records in `./TWO` as basename, tab, implementation. `know bin/pun` shows one record and `know TWO` lists the whole file. See [[TWO]].

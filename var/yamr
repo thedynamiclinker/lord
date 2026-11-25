@@ -1,0 +1,36 @@
+#!lord make
+0. bin/edn:
+    a simple editor, as if written by god. here it's just a symlink to bin/lord (see also ed(in unix v1) || vi, aka 6, aka zan/men/ for more details.)
+
+1. make bin/pun:
+    toggles cwd btw /path/to/some/dir & /root/path/to/some/dir & back via the pun btw root (/) and root (/root). -p / --parents mkdirs the latter if it DNE yet.
+
+2. make bin/two:
+    'run || err' files like TWO (this file) if in 正 (correct) 2-line TWO fmt (like this) && fail iff any line len -gt say, 160, bc that's 2x the ancient limit.
+
+3. make etc/two:
+    config file for TWO lang opts: (1) len: line length, default given in ibid line (aka prev line) (2) log: logos / reasoning level (default lordhavemercy).
+
+4. make zan/
+    new top level prefix where we'll put commands installed via the 'sacred text' of TWO lang being defined and implemented here: zan 咱 is the "sacred prefix."
+
+5. make zan/men/
+    new world version of `man`, but pgs are just md, w/ obsidian [[links]] (pager like `info`, nav w/ ctrl+]), no file ext, a pg is just the TWO line θ@ 美d it.
+
+6. make zan/men/1/@(TWO|two)
+    two 'men' pages for the two TWO files (in bin & etc) in 'men @(1|5)' respectively (men has 1,2,3,4,5,6,7,8,9 like man, same general categories).
+
+7. make bin/nhs:
+    snake. most erom animal. gives knowledge, so you can know. impl. is just ln -s to bin/know. creat men 6 pgs for: nhs, erom, nkd, snk, life, ev* ad{, && e'}m
+
+8. make bin/know:
+    bc the whole system is both *implemented* (by the lord) & *documented* (by zan/men) in *one line* TWO files, know =~ ls/cat for knowledge: ie `know .` works
+
+9. make bin/no:
+    the lord made a symlink to know called "no". bc obviously. see [[Gen 3]] in [[We]] (or for more (i.e. less (bc `less` is `more`)) see `men (3) gen3 || we`.)
+
+X. make zan/men/1/know:
+    give example uses, e.g. `know .` output is like `git cat-file -p` on a tree, but shows TWO lang 'doc = impl' files. stdout gives basename and impl (in TWO.)
+
+XI. make var/yamr:
+    cp this file to var/yamr 1ce¹ everything in it is created, so we know what We ויאמר ed. (1: that's "once", @lord learn comm. proto. as We go, spc is limited)

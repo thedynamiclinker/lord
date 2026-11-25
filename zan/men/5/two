@@ -1,0 +1,1 @@
+`etc/two` configures [[TWO]] with `len=160` characters per line and `log=lordhavemercy` for reasoning effort. Set `TWO_CONFIG` to read another config file.
