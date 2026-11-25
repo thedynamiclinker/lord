@@ -11,6 +11,18 @@ import textwrap
 PAGES = Path(__file__).resolve().parent.parent / "zan/men"
 SECTIONS = tuple(str(number) for number in range(1, 10))
 LINK = re.compile(r"\[\[([^\]|]+)(?:\|([^\]]+))?\]\]")
+BASH_COMPLETION = r"""_men() {
+    local prefix=$2 match
+    if [[ $prefix == *\\* && ${COMP_WORDS[COMP_CWORD]} != [\"\']* ]]; then
+        IFS= read -d '' prefix < <(printf '%s\0' "$prefix")
+    fi
+    COMPREPLY=()
+    while IFS= read -r -d '' match; do
+        COMPREPLY+=("$match")
+    done < <(command "$1" --complete "$prefix" "${COMP_WORDS[@]:1:COMP_CWORD-1}")
+}
+complete -o fullquote -F _men men 2>/dev/null || complete -o filenames -F _men men
+"""
 
 
 def find_page(name, section=None):
@@ -21,6 +33,32 @@ def find_page(name, section=None):
         if page.is_file():
             return page
     raise ValueError(f"no page for {name}" if section is None else f"no page for {name}({section})")
+
+
+def complete(prefix, words):
+    positional = words.copy()
+    options = "--" not in positional
+    if not options:
+        positional.remove("--")
+    if positional and (len(positional) != 1 or positional[0] not in SECTIONS):
+        return
+
+    if options and prefix.startswith("-"):
+        names = {"-h", "--help", "--"}
+        if not positional:
+            names.add("--completion")
+    else:
+        names = set() if positional else set(SECTIONS)
+        for section in positional or SECTIONS:
+            names.update(
+                page.name for page in (PAGES / section).glob("*")
+                if page.name.startswith(prefix) and page.is_file()
+                and (not options or not page.name.startswith("-"))
+            )
+
+    for name in sorted(names):
+        if name.startswith(prefix):
+            sys.stdout.buffer.write(os.fsencode(name) + b"\0")
 
 
 def read_page(page):
@@ -80,7 +118,18 @@ def browse(screen, page, text):
 
 
 def main():
-    parser = argparse.ArgumentParser(usage="men [SECTION] PAGE")
+    argv = sys.argv[1:]
+    if argv == ["--completion"]:
+        sys.stdout.write(BASH_COMPLETION)
+        return 0
+    if len(argv) >= 2 and argv[0] == "--complete":
+        complete(argv[1], argv[2:])
+        return 0
+
+    parser = argparse.ArgumentParser(
+        usage="men [SECTION] PAGE",
+        epilog="Enable Bash completion with source <(men --completion).",
+    )
     parser.add_argument("section", nargs="?", choices=SECTIONS)
     parser.add_argument("page")
     args = parser.parse_args()
