@@ -1,5 +1,41 @@
-# lord
+# gen3
 
-> There's too much violence
-> I'm gonna kill everything
-> - Gen 6:13
+# > There's too much violence
+# > I'm gonna kill everything
+# > - Gen 6:13
+
+move TWO:
+    ויאמר var/yamr bc (we did it) && var/yamr because you did this (you know) we now banish the TWO out of here into zan/ in the east bc 咱 (= to be) inclusive We.
+
+kill bin/no:
+    finite life in bin bc we did it & no need (you know... fill in the gaps). q*n: what? creator: you know what no more ed*n bc lordhavemercy, fill in the gaps
+
+lock bin/ed*n:
+    no no, no edn. bin/ed*n now -> var/lock
+
+make bin/sh:
+    make בנ useable bc we 我们 hv 有 you 生 & חיה life's 来ing 2gether (i) 有 have men & completion 我们. so now `sh` & We can get up & dn & 土 work YKWIM yada ידע yada.
+
+make usr/bin:
+    usr. put b*n בן in there. no need to e(γγς)plain. you know.what.i mean (yada ידע yada) so usr && put bin in there. possible we already did it.
+
+make zan/bin:
+    where we're heading
+
+make usr/bin/toybox:
+    new b*n בנ needs toybox for old maker's bin
+
+make usr/bin/env:
+    new bin, new env.
+
+make usr/bin/make:
+    make make. need maker so we can קינ make shit come on people (yknow ידע yada ידע yada)
+
+make etc/profile:
+    let it source (etc/([a-z]*sh)rc) if running \1 && if \1 exists
+
+make Makefile:
+    let it have {un,}install, develop, new (makes a new copy of the HEAD of this repo by cloning remote up), chroot (enters a 'new' universe created with make new).
+
+make README:
+    rename old GEN -> README
