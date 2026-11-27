@@ -1,0 +1,92 @@
+
+          0123456789ABCDEFGHIJKLMNOPQRS
+_=@     # @ O  1  I  
+        #
+W=E     # W @ rot @ 90 @
+
+A=T     # A @ heb @ (rot atbash := alias atb)
+T=A     # T @ ibd 1
+E=O     # E @ ibr A
+R=I     # R=2 2=1 @ 
+
+e=1
+
+t=     # heb
+a=O     # 
+
+o=0
+i=1
+
+n=H
+s=S
+h=N
+
+r=2
+
+d=
+l=1
+
+u=
+
+O=
+
+_r="$_red"
+_g="$_gre"
+_b="$_blu"
+
+un ix pd ld rgb 
+
+declare -A
+A=(
+EU=dn
+
+case a in
+
+    a)
+
+        if [[ ${EUID} == 0 ]]; then
+            export PS1="${_red}t${_gre}@${_blu}\h${_whi} \W ${_red}\#${_end} "
+        else
+            export PS1="${_gre}t${_red}@${_blu}\h${_red} \w ${_whi}\$${_end} "
+        fi
+        ;;
+
+    l)
+        if [[ ${EUID} == 0 ]]; then
+            export PS1="${_red}\u${_gre}@${_blu}\h${_whi} \W ${_red}\$${_end} "
+        else
+            export PS1="${_gre}\u${_red}@${_blu}\h${_red} \w ${_whi}\$${_end} "
+        fi
+        ;;
+
+    u)
+        if [[ ${EUID} == 0 ]]; then
+            export PS1="${_red}j${_gre}@${_blu}\h${_whi} \W ${_red}\$${_end} "
+        else
+            export PS1="${_gre}r${_red}@${_blu}\h${_red} \w ${_whi}\$${_end} "
+        fi
+    ;;
+
+    # A
+    if [[ ${EUID} == 0 ]]; then
+        export PS1="${_red}a${_gre}@${_blu}\h${_whi} \W ${_red}\$${_end} "
+    else
+        export PS1="${_gre}t${_red}@${_blu}\h${_red} \w ${_whi}\$${_end} "
+    fi
+
+    # L
+    if [[ ${EUID} == 0 ]]; then
+        export PS1="${_red}\u${_gre}@${_blu}\h${_whi} \W ${_red}\$${_end} "
+    else
+        export PS1="${_gre}\u${_red}@${_blu}\h${_red} \w ${_whi}\$${_end} "
+    fi
+
+    # U
+    if [[ ${EUID} == 0 ]]; then
+        export PS1="${_red}j${_gre}@${_blu}\h${_whi} \W ${_red}\$${_end} "
+    else
+        export PS1="${_gre}r${_red}@${_blu}\h${_red} \w ${_whi}\$${_end} "
+    fi
+
+    export PS2="${_blu}>>${_end} "
+}
