@@ -1,0 +1,159 @@
+#!/usr/bin/env python3
+"""Run one interview from ./LOOP.
+
+Read etc/answers/un before choosing the next questions. Keep each round to
+decisions that affect the next small, working change. Save the user's answers
+before applying that change. Keep notes here and the original prompt in LOOP.
+"""
+
+import fcntl
+import json
+import os
+from pathlib import Path
+import re
+import subprocess
+import sys
+import tempfile
+
+
+ROOT = Path(__file__).resolve().parents[2]
+ANSWERS = ROOT / "etc/answers/un"
+FIRST = {
+    "name": "git-opening-and-recipes",
+    "questions": [
+        [
+            "When a Git branch provides a directory, where should its files live while you explore them?",
+            "Read-only export from a shared Git store when you ask for a branch",
+            "Editable checkout backed by a shared Git store",
+            "Ordinary local trees for now, with Git handled outside un",
+        ],
+        [
+            "What should opening a directory change?",
+            "Expose the selected tree at ... and prefer its commands",
+            "Make the selected tree the shell’s working directory",
+            "Merge provider files into the working directory",
+        ],
+        [
+            "What should a one-line directory command look like at first?",
+            "name: shell command in .@, with English in executable LD scripts",
+            "Real Make targets in .@, with make interpreting them",
+            "One executable file per command, named after the command",
+        ],
+    ],
+}
+
+
+def rounds():
+    return sorted(
+        (
+            path for path in ANSWERS.glob("*")
+            if re.fullmatch(r"[0-9]{2,}-.+", path.name) and path.is_file()
+        ),
+        key=lambda path: int(path.name.split("-", 1)[0]),
+    )
+
+
+def interview(runner, prompt, history):
+    if not history:
+        return FIRST
+    request = (
+        f"{prompt}\n\n"
+        "This invocation only prepares the next interview. Read etc/loops/un, "
+        "all previous answers in etc/answers/un, and the current implementation. "
+        "Ask one to three questions about the next small implementation decision. "
+        "Return a single JSON object with keys name and questions. The name is a "
+        "short lowercase hyphenated topic. Each entry in questions is an array of "
+        "four strings: the question, the recommended choice, and two other choices."
+    )
+    result = subprocess.run(
+        [runner, "-i", "--", request], stdin=subprocess.DEVNULL, stdout=subprocess.PIPE,
+        text=True,
+    )
+    if result.returncode:
+        sys.exit(result.returncode)
+    try:
+        draft = json.loads(result.stdout)
+        name, questions = draft["name"], draft["questions"]
+        if not re.fullmatch(r"[a-z0-9]+(?:-[a-z0-9]+)*", name) or len(name) > 64:
+            raise ValueError
+        if not isinstance(questions, list) or not 1 <= len(questions) <= 3:
+            raise ValueError
+        for row in questions:
+            if not isinstance(row, list) or len(row) != 4:
+                raise ValueError
+            if any(not isinstance(value, str) or not value.strip() or value.splitlines() != [value]
+                   for value in row):
+                raise ValueError
+    except (ValueError, TypeError, KeyError):
+        raise ValueError("expected a JSON interview with a topic and up to three questions") from None
+    return draft
+
+
+def ask(questions):
+    entries = []
+    for question, *choices in questions:
+        print(f"\n{question}", file=sys.stderr)
+        for number, choice in enumerate(choices, 1):
+            recommendation = " (recommended)" if number == 1 else ""
+            print(f"  {number}. {choice}{recommendation}", file=sys.stderr)
+        while True:
+            print("Enter a number or type your own answer. ", end="", file=sys.stderr, flush=True)
+            reply = input()
+            if reply.strip():
+                break
+        if reply.strip() in ("1", "2", "3"):
+            reply = choices[int(reply) - 1]
+        entries.append(f"{question}\n{reply}\n\n")
+    return "".join(entries)
+
+
+def save(name, transcript, history):
+    ANSWERS.mkdir(parents=True, exist_ok=True)
+    directory = os.open(ANSWERS, os.O_RDONLY)
+    try:
+        fcntl.flock(directory, fcntl.LOCK_EX)
+        if rounds() != history:
+            raise ValueError("another interview was saved while this one was open")
+        number = int(history[-1].name.split("-", 1)[0]) + 1 if history else 1
+        record = ANSWERS / f"{number:02d}-{name}"
+        with tempfile.TemporaryDirectory(prefix=".un-", dir=ANSWERS) as temp:
+            draft = Path(temp) / record.name
+            draft.write_text(transcript, encoding="utf-8")
+            draft.replace(record)
+    finally:
+        os.close(directory)
+    return record.relative_to(ROOT)
+
+
+def main():
+    with os.fdopen(3, encoding="utf-8") as original:
+        prompt = original.read().rstrip()
+    os.chdir(ROOT)
+    os.environ["PATH"] = f"{ROOT / 'bin'}{os.pathsep}{os.environ.get('PATH', os.defpath)}"
+    runner = "lordhavemercy"
+    history = rounds()
+    draft = interview(runner, prompt, history)
+    transcript = ask(draft["questions"])
+    record = save(draft["name"], transcript, history)
+    print(f"\n{record}", file=sys.stderr, flush=True)
+    request = (
+        f"{prompt}\n\n"
+        f"The interview is complete. The user's answers are already saved in {record}. "
+        "Apply those answers to the next small implementation change and verify it. "
+        "Read the earlier answers and the notes in etc/loops/un for context. "
+        "The next invocation will ask the next questions."
+    )
+    with open(os.devnull, "rb") as empty:
+        os.dup2(empty.fileno(), sys.stdin.fileno())
+    os.execvp(runner, [runner, "-f", "--verbose", "--", request])
+
+
+if __name__ == "__main__":
+    try:
+        main()
+    except EOFError:
+        sys.exit("\nLOOP: interview incomplete")
+    except KeyboardInterrupt:
+        sys.exit(130)
+    except (OSError, ValueError) as error:
+        sys.exit(f"LOOP: {error}")

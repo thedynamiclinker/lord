@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-lordhavemercy -f --verbose << "EOF"
+exec "$(dirname "$0")/etc/loops/un" 3<< "EOF"
 Read all the new files added in commit b9343d784d95b3a92e998eed78f0c86cca63a205, and try to get the idea of what I'm looking for.
 
 I'm sure the prompt contradicts itself and it surely incomplete, but I don't think we're looking for something difficult or complex here.
