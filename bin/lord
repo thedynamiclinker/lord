@@ -6,7 +6,7 @@ case "$runner" in
     law) effort=none ;;
     lawd) effort=low ;;
     lord) effort=medium ;;
-    lordey) effort=high ;;
+    lorde|lordey|lordy) effort=high ;;
     lordjesus) effort=xhigh ;;
     lordhavemercy) effort=xhigh ;;
     lordgodelmighty) effort=xhigh ;;
@@ -78,13 +78,15 @@ permission=${LORD_PERMISSION:-text}
 program=${LORD_PROGRAM:-${NSH_PROGRAM:-}}
 file=
 verbose=0
+trust=0
 while [ "$#" -gt 0 ]; do
     case $1 in
         -h|--help)
-            printf '%s\n' 'usage: lord [-n|-i|-f] [-v|--verbose] [--effort 0..5|LEVEL] [--permission text|read|write] [--program FILE] [--] [REQUEST ...]' \
+            printf '%s\n' 'usage: lord [-n|-i|-f] [-v|--verbose] [--trust] [--effort 0..5|LEVEL] [--permission text|read|write] [--program FILE] [--] [REQUEST ...]' \
                 '       lord [OPTIONS] --file FILE [ARG ...]' \
                 'LORD_BACKEND selects an executable that accepts request argv and input on stdin.' \
-                'With no request, read the prompt from stdin. Read and write permissions use Codex.'
+                'With no request, read the prompt from stdin. Read and write permissions use Codex.' \
+                '--trust lets Codex read user config and save project trust, or runs Claude without --safe-mode.'
             auth_usage
             exit ;;
         --effort|--permission|--program)
@@ -107,6 +109,7 @@ while [ "$#" -gt 0 ]; do
         -i) permission=read; shift ;;
         -f) permission=write; shift ;;
         -v|--verbose) verbose=1; shift ;;
+        --trust) trust=1; shift ;;
         @@) shift ;;
         --) shift; break ;;
         *) break ;;
@@ -178,8 +181,9 @@ if (($#)); then prompt=(-- "$*"); fi
 model=${LORD_MODEL:-}
 if [ "$provider" = claude ]; then
     if [ "$effort" = none ]; then effort=low; fi
-    args=(--print --no-session-persistence --safe-mode --strict-mcp-config
-        --tools '' --disallowedTools 'mcp__*' --effort "$effort")
+    args=(--print --no-session-persistence)
+    if ((!trust)); then args+=(--safe-mode); fi
+    args+=(--strict-mcp-config --tools '' --disallowedTools 'mcp__*' --effort "$effort")
     if ((verbose)); then args+=(--verbose); fi
     if [ -n "$program" ]; then args+=(--append-system-prompt-file "$program"); fi
     if [ -n "$model" ]; then args+=(--model "$model"); fi
@@ -188,8 +192,9 @@ fi
 
 sandbox=read-only
 if [ "$permission" = write ]; then sandbox=workspace-write; fi
-args=(exec --ephemeral --skip-git-repo-check --color never --sandbox "$sandbox"
-    --ignore-user-config --disable apps --disable plugins --disable hooks --disable computer_use
+args=(exec --ephemeral --skip-git-repo-check --color never --sandbox "$sandbox")
+if ((trust)); then args+=(--trust); else args+=(--ignore-user-config); fi
+args+=(--disable apps --disable plugins --disable hooks --disable computer_use
     -c 'mcp_servers={}' -c 'web_search="disabled"' -c 'approval_policy="never"'
     -c 'sandbox_workspace_write.network_access=false' -c "model_reasoning_effort=\"$effort\"")
 if [ "$permission" = text ]; then

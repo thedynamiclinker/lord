@@ -15,8 +15,9 @@ up with no arguments updates existing provider paths. Naming entries publishes
 them explicitly. The default is local rsync. UN_SYNC can replace both listing
 and transfers with an executable from the user's shell environment.
 
-A later round can decide how to select Git refs and when to pull, commit, and
-push. The @ commands can build on that same provider selection.
+The current provider behavior is declared in var/declarative/README.md.
+Editable Git providers use external metadata and sync through the same
+up and dn commands. @ runs commands in the selected provider.
 """
 
 import fcntl
