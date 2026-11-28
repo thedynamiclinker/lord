@@ -22,5 +22,18 @@ system wide for all things that use the lord commands.
 
 Implement all that.
 
-Actually let's implement it by looping on the same prompt"
+Actually let's implement it by looping on the same prompt.
+
+Whenever I run this prompt, however many times, I want you to:
+1. Generate a list of questions to ask me, to try to narrow down the most important points you think you need to know before you can implement the whole thing.
+2. Then store the answers to those questions in etc/answers/un/%02d-$name where the $name is a summary of what you asked and learned in that round.
+3. Then make sure there's a top level un command in the bin of this directory, make sure its portable and only uses env vars and writes its own config
+   to ~/.config/un/ or whatever (the analogue of etc if we're not a whole os yet), and let me explore the (simple!) command, and the much more flexible
+   set of possibilities in the system myself. Also maybe instead of ATPATH it should be something else. But it should feel like the shell and unix.
+   Self contained executable, can be moved anywhere else as long as it's in $PATH, can add config files but don't need to, has a man page that installs
+   to the first writable place in MANPATH by default, whatever, you get it, don't overfit to the prompt. Ask questions.
+4. I have to run, but generate the questions, then ask me interactively, with pre-generated multiple choice answers plus the option to type something too,
+   then let's loop on that until the system is good.
+
+Go!
 EOF
