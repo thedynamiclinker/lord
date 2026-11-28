@@ -1,0 +1,20 @@
+# etc/zan
+
+# z: zh. the east. adds zan/etc/mn
+#    to etc/mn and adds an almost
+#    empty dir in mnt/mn with only
+#    the standard '...' file.
+#    mn stands for
+#    1. meaning. the east writes
+#       primarily with semantics,
+#       at least in z.
+#    2. moon. when used as a chroot,
+#       the z prefix is mounted at
+#       mnt/mn, a pun on mnt/sinai
+#       which is possibly derived
+#       from sin, the sumerian god
+#       of the moon.
+#
+# a: an. the west, or anglosphere.
+#    adds zan/etc/sn to etc/sn
+zan     z a n

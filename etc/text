@@ -1,0 +1,107 @@
+# etc/text
+
+etc/skel
+edm     unix
+
+################
+### Headings ###
+################
+
+# Heading format
+#
+# Default is do
+# what this file
+# does, and the
+# syntax below
+# is defined by
+# that default.
+# Write your own
+# and it should
+# just work.
+
+hns    default
+
+hns:
+    a = "### %s ###"
+    b = "#"*len(a)
+    c = f"{b}\n{a}\n{b}\n"
+    return c
+
+###################
+### Edit Method ###
+###################
+
+# unix means the unix way
+# keep the original versn
+# of each file in etc/skel
+# and then just edit etc/
+# files with whatever tool
+# you want. If you need
+# the original copy, it's
+# in etc/skel
+
+#############
+### Lines ###
+#############
+
+# How long should lines of text be?
+#
+# Answer:
+#
+#   That's up to you.
+#   But you should be able to
+#   control the answer more or
+#   less globally, at least for
+#   the tools that decide to read
+#   this file and do what it says.
+#
+#   That shouldn't be all tools,
+#   but it's not a bad experiment
+#   to try out, so let's do that.
+#
+# Principle
+#
+#   Handle tahe Five Tens
+#
+# The Five Tens are some default
+# sizes of line length that make
+# sense historically, for humans.
+#
+# Chosen by examining the history
+# of writing since its inception.
+# Based on man himself, the first
+# monospaced 5/10 system.
+#
+#  10  Sumerian cuneiform
+#  20  Babylonian cuneiform
+#  40  Masoretic text, Lions book¹
+#  80  Cards, Unix v1-v6
+# 160  Two 80-column fields
+#
+# Approximate historical widths.
+#
+# So, with that in mind...
+#
+# Max line length for all text
+# in the system. Default: 160.
+
+len     160
+
+###############
+### Unicode ###
+###############
+
+# encodings
+#
+# ken is utf-8, named for ken thompson
+# 
+# this is the only unicode encoding the
+# system supports, because come on guys
+
+enc     ken
+
+#################
+### Footnotes ###
+#################
+
+# ¹ Lions commentary on Unix v6.

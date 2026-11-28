@@ -1,0 +1,419 @@
+# etc/un
+
+###########
+### ... ###
+###########
+#
+# the seed
+#
+# the un system can be thought of as a un-
+# ion (or intersection (or smth (w/e))) of
+#
+# (a) systems like .git or .obsidian, and
+#
+# (b) systems like containers, chroots, and
+#     bootable operating systems.
+#
+# it starts with a sh command called un.
+#
+# sh un (or un, if un is in $PATH) will
+# shun your existing universe (os) and
+# help you to build a new one, however
+# suits your needs.
+#
+# un nu: makes a new empty universe
+         with only a single .@ file
+# un cd: makes a new empty universe
+         with the cd config present
+# un ix: makes a new empty universe
+         with the ix config present
+# un-$x: un-* acts like git-*, it's
+         a simple multiplexer, & it
+         is willing to execute cmds
+         in $PATH named un-*, as if
+         they were part of its self
+
+# un 一 one dependency to rule them all
+#       set to the url to a different repo
+#       to choose a different implementation
+un      https://github.com/thedynamiclinker/un
+
+
+# universes
+# 一            un  | @a -> 1
+#  二           ni  | @n -> 2
+#   IV          iv  | @a -> 4
+#     二        er  | @z -> 2
+#           |O|     | @@ -> 5 && 五 && wu && go && V && five && lol
+# universes 101 .....
+#   iv||    ....
+#   ||er    ..
+#   IV二    .
+#    42     𒀭
+#
+# the answer to life, the universe, and everything
+#
+# the following lines are in the format [name] [url] if two fields,
+# or [name] [url] [branch] if the [name] does not match the basename
+# of the [url]
+#
+# commented out universes are not yet implemented
+# and the repos may not yet exist. uncommented
+# universes can be assumed to exist by un
+
+nu      https://github.com/notarealdeveloper/lord   gen     # the smallest of seeds
+gen     https://github.com/thedynamiclinker/lord    gen     # a bit more than the seed
+lord    https://github.com/thedynamiclinker/lord    master  # preparation for coming of yhwh
+yhwh    https://github.com/thedynamiclinker/yhwh            # base system for all of YHWH's apps
+YHWH    https://github.com/thedynamiclinker/YHWH            # yhwh base with the YHWH app installed
+
+# physics
+#
+# or: basic universe structure
+#
+# =======================================
+#
+# by default, all universes created with
+#
+#          un new [src [dst]]
+#
+# create a dir named in the usual way
+
+# all universes have two forms of extension
+#
+# un ix     # ιχ: unix like extension: your choice of how to extend
+# un xp     # χρ: explore a universe xp
+# for all new universes (dir) is empty
+# except for a single file named .@
+#
+# this allows the system
+# empty, containing 
+#
+#
+# ... is the default name for the
+# file that is used by the system's
+# o and : commands to support the
+# 'opening' (zooming in) and the
+# 'closing' (zooming out) of a
+# directory or file, as well as
+# for supporting the toggling
+# of one's cwd to prefixes
+# with the same pathnames
+# as the root system, but
+# different contents.
+# this allows users
+# to, for example,
+# start with an
+# extremely 小
+# small seed
+# of a sys-
+# tem and
+# add to
+# it at
+# their
+# own
+# pa-
+# ce-
+# bc... (
+
+# bc      before-xp           # χρ, grk for christ
+# ad      anno-domini         # anno-domini, latin
+# pa      post-apocalypse     # english, bc c'mon
+
+# Welcome
+# to year
+# of your
+# L||D &&
+# ours...
+# ..
+#       .
+# Checkur
+# w@tchez
+# bc it's
+#
+# 0x09 PA
+#
+#   🎉
+#
+# Towards
+# a pro-h
+# uman AI
+# apocal-
+# ypse!!™
+# -LD   .
+#       .
+#       .
+#
+
+# Fundamental Physics
+#
+# .
+# :
+# -
+# o
+#
+# o is a command that opens a dir for xp-loring
+#   if a dir has a .@ file, that file should be
+#   written in TWO lang, and the o target shou-
+#   ld be written used to describe what happens
+#   when we o the dir using the o command. That
+#   command should just be a one line sh script
+#   that calls mk. mk should be a one line bash
+#   script (or whatever) that delegates to make
+#   but with -f or w/e option is needed to look
+#   for makefiles in nonstandard places, namely
+#
+#                      .@
+#
+#   and any other dirs (hidden or otherwise) in
+#   the etc/at file that the user or distro has
+#   added manually.
+#
+#   a dirs .@, if present, may be written in 2
+#   namely TWO lang, as described in the lord-
+#   repo in the dynamiclinker.com's github and
+#   also in notarealdeveloper's lord repo but,
+#   uh, I'm typing too much so lemme wrap up.:
+#
+#   they're basically any executables. forget
+#   what I said before. Every directory has a
+#   set of make targets so you should be able
+#   to cd into an 'empty' directory and type:
+#
+#   @                  or            @ [name]
+#
+#   o                  or            o [name]
+#
+#   :                  or            : [name]
+#
+#   -                  or            - [name]
+#   
+#   and get a description of where you're at,
+#   in the form of an executable list of cmds
+#   like typing 'make <TAB>' in a repo with a
+#   make file.
+#
+#
+# W@?
+# ===
+# Explaining what the hell we just said and why
+#
+# @ is a simple command in bin called atbash
+#
+# it's essentially a shell script that does some
+# simple things related to the exploration of the
+# system using the .@ file and then delegates
+# to the lordhavemercy -f command unless it was
+# given simple arguments like '@ <dir>' or
+# @? or @o or @: which are shorthand for
+# @ ? and @ o and @ : respectively.
+#
+# There are also commands ? o and : defined in
+# the system's bin and an @ path for .@ files
+# defined in etc/at.
+#
+#   every dir in the system *may* have an .@
+#   or @ file, but is not required to have it
+#
+#   whether or not the dir has such a file,
+#   you are always @ (at) somewhere, and the
+#   system always enables you to explore it
+#   in many more ways than classical unix or
+#   linux. All dirs support the following cmds.
+#  
+#   default commands:
+#
+#   @ [dir]      reads [dir]'s .@ file or looks
+#                up available commands for that
+#                dir using $ATPATH defined in
+#                etc/at
+#   
+#   o            opens a directory. this is
+#                different from cd or mkdir.
+#                any dir in the base system
+#                is supposed to have a some
+#                corresponding path in the
+#                system's top level /zan/men
+#                which is the 門 gate to 咱 We
+#                the Nameless authors of the
+#                system. By default, zan/men
+#                just contains what WOULD be
+#                in a FULL install of our
+#                system IF the user installed
+#                all packages at once. That's
+#                the whole idea. Think of it
+#                as a package manager that you
+#                can expand the ix operating
+#                system with by cd'ing around
+#                and xp-loring it and talking
+#                to the @ command to learn
+#                about where you're @, or talking
+#                to the lord command if you
+#                have more free form questions
+#                or need to get other stuff done
+#                for some purpose like your job
+#                and don't have time or desire
+#                to explore. Think of it as a nixos
+#                container with almost nothing
+#                installed at first, which you
+#                can explore and expand by
+#
+#                o (open)    opening dirs you're in,
+#                            which adds a file or dir
+#                            called '...' copied from
+#                            $ATPATH which is local by
+#                            default but can also be
+#                            any remote git repo.
+#                            Basically you can choose
+#                            your own or anyone else's
+#                            implementation of a pathname,
+#                            and @ helps you do it.
+#                            o <path> fetches that path's
+#                            '...' file-or-dir from your
+#                            system's ATPATH or gives an
+#                            error if it can't find one.
+#                            For now, we'll just keep the
+#                            system varying levels of
+#                            empty, and add the nu, ix,
+#                            ld, el, yhwh, or whatever
+#                            prefixes to somewhere in zan,
+#                            and then we can share the same
+#                            .@ files between all distros,
+#                            and the only difference in
+#                            implementation is that the
+#                            zan/men/<universe> prefixes
+#                            have different things in them.
+#
+#
+#   commands we'll need
+#   in bin to get started
+#
+#   o                       opens a dir, creating ...
+#                           by fetching it from the first
+#                           place that provides it in ATPATH
+#
+#   :                       closes a dir, removing ... from
+#                           that dir but not from the system zan
+#
+#   -                       switch to a different implementation
+#                           of the dir in question, by changing ...
+#
+#
+#   ..                      the 'parent' command: the core command
+#                           for dealing with open dirs. Should tab
+#                           complete its make targets or whatever,
+#                           and by default those should just be the
+#                           files in /zan/$path if we're currently
+#                           in the dir called $path. Make sense? It's
+#                           just a way of turning a potentially large
+#                           linux system into an explorable game type
+#                           thing that makes it fun to explore the fs
+#                           and learn about what's what.
+#
+#                           we should actually maybe just make all the
+#                           .@ files be makefiles and make them be called
+#                           .: by default. : is one character that looks
+#                           the same as .. but sort of 'sealed up.
+#                           So .: is like a closed door version of ...
+#                           Let's do that.
+#
+#   ,                       short for ./<dir-or-file>
+#                           executes the dir's ... file with whatever
+#                           shebang or other behavior would happen by
+#                           typing //
+#                           file if present, in process, in the shell.
+#
+# Ok so I think I solved it.
+# Every directory has the ability to:
+#   open, read, write, close in unix.
+# This is double unix.
+# It's got the unix behavior PLUS the ability to
+#
+#   Open (o)           Like zooming in on the dir.
+#                      It stays open by default once open.
+#                      Open just gets ... from $ATPATH
+#   Read (@)           @ . just gives info on the dir via .@
+#                      plus via .: if not opened, and via ...
+#                      if opened if present. .@ is always present
+#                      for every dir outside of zan/ that's provided
+#                      by a 'correct' distro of the un system, that
+#                      is, by a correct un-iverse as described here.
+#   Write (..)         .. <tab> lists what files the dir provides in '...'
+#                      via the distro's ATPATH or whatever,
+#                      the 'distro' that a dir 'is' if it selects one.
+#                      (currently available ones are the ones we'll toss
+#                      in zan/men/<name> once I can stop typing. tl;dr:
+#                      <name> is those names I mentioned
+#                      earlier like nu and ld and ix and stuff.
+#                      we can ship any number of those, same as bin
+#                      commands in $PATH. Essentially let's do bin
+#                      and $PATH and all the good things about the shell
+#                      and Makefiles but let's do it system wide, and
+#                      make the YHWH app in ~/src/ use the bare bones
+#                      'un nu' directory as its 'new universe' button
+#                      to replace the .git or .obsidian concept with
+#                      this concept in a ken thompson-esque $PATH for
+#                      all things a dir provides. Oh and on that note,
+#                      a few more quick things...
+#   Exec (,)           Executable stuff provided by the directory,
+#                      maybe in .@ or in ... (if it's a makefile with
+#                      an x target, idk, we need to decide on the best
+#                      and most minimal design so that it feels fun to
+#                      play with this system and doesn't feel like a pain
+#                      or cognitive load. want ix to be like plan ix but
+#                      without the 'plan' that sort of made it fail.
+#                      Ramya's gone for 3 weeks, same as Ken's wife was
+#                      when he wrote unix. I have some other chores to
+#                      do, but build all that, and whenever you're not
+#                      sure which of 2 or more decisions to make from
+#                      a simplicity vs completeness perspective, just
+#                      make both decisions, and put the simpler approach
+#                      in ~/src/lord/zan/men/<name> for one of the simpler
+#                      'distro' names listed above when I listed all those
+#                      urls that didn't exist yet. Put ~/src/lord/zan/men
+#                      in the .gitignore so that dir (men) can be a 门 gate
+#                      to arbitrary other repos implementing different worlds
+#                      as we go. Think of this like a directory specific version
+#                      of .git with package managers replaced with zan/men and
+#                      some simple 'rsync -av --delete' and 'cp' type commands but
+#                      defaulting to local development with $ATPATH for everything,
+#                      then enabling remote sync via just putting a github url in
+#                      a file somewhere. You get it. Implement that. Want it to be fun,
+#                      and feel like an infinite open-ended game that the user originally
+#                      doesn't even realize is THERE, they think a 'un' universe is just an
+#                      empty dir, or they think YHWH is just an obsidian type app but funny
+#                      and weird, but the system is actually infinitely more than they see
+#                      @ first glance. That's what we want. Do it.
+#                      We can do it all just with a few weirdly named roughly one-liner shell
+#                      scripts with #!/usr/bin/env sh shebangs and some invisible makefiles
+#                      with make targets discoverable via tab completion on some dummy
+#                      wrapper command. Make the system SIMPLE, as simple as possible, even
+#                      if I made it too complex up above, and then shove as much extra
+#                      functionality as possible into the universes that are more complex than
+#                      the base nu universe. Oh also, '@' should basically be the coreutils
+#                      or toybox of the system, not the AI shell thing I mentioned above.
+#                      so '@ mkdir <dir>' makes <dir> *in the way that's consistent with
+#                      the current user's mkdir implementation, and that's configurable via
+#                      etc/@/mkdir or something. But by default '@ mkdir' should make a dir
+#                      with whatever minimal machinery is needed to support the system above.
+#                      And '@ ls' reads the dir, '@ cat file' cats not the contents of that file
+#                      but the *metadata* or *script* that implemented it in TWO language as
+#                      sketched in ~/src/lord/{GEN,TWO} (modulo the wacky zan language in there,
+#                      imagine that's optional and just there to stay under the 160 char limit
+#                      we imposed on ourselves because constraints help creativity. Ok that's all!
+#                      Wait one more thing...
+#  Close (:)           Keeps whatever the dir has in it but 'closes' it
+#                      by removing its ... file and replacing it with
+#                      its original .: if it had one. Actually .: and ...
+#                      can have the same content, just rename them so the
+#                      tools know which are open and which are closed.
+#                      So if we '@ ls' aka 'read' a dir when it's closed,
+#                      we shouldn't get an error, but maybe we should get
+#                      nothing, or maybe we should get a different kind of
+#                      information. Make it simple and unix-y, and make it
+#                      simple and fun to extend by adding stuff to zan/men/
+#                      in whatever distro makes sense. Ah! one more thing...
+# Escape (\\)          Exodus! This sends the user to a different 'branch' of the current dir.
+#                      Like cd'ing sideways or cd'ing into a different universe where that
+#                      directory is different (less cluttered, more simple, more powerful, etc).
+
