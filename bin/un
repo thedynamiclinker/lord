@@ -1,0 +1,384 @@
+#!/usr/bin/env python3
+import errno
+import os
+from pathlib import Path
+import sys
+import tempfile
+
+
+MARKER = b"# un root\n"
+HELP = """usage: un [-C DIR] [list | NAME [ARG ...]]
+       un [-C DIR] run NAME [ARG ...]
+       un [-C DIR] new [DIR]
+       un [-C DIR] providers | open [PROVIDER] | switch PROVIDER | close
+       un path [PATHLIST]
+       un completion | install-man [MANPATH-DIR]
+"""
+
+COMPLETION = r'''_un() {
+    local i=1 cur=${COMP_WORDS[COMP_CWORD]} word
+    local -a dir=()
+    COMPREPLY=()
+    if [[ ${COMP_WORDS[1]} == -C ]]; then
+        if ((COMP_CWORD == 2)); then
+            while IFS= read -r word; do COMPREPLY+=("$word"); done < <(compgen -d -- "$cur")
+            return
+        fi
+        dir=(-C "${COMP_WORDS[2]}")
+        i=3
+    fi
+    if ((COMP_CWORD == i)); then
+        while IFS= read -r word; do
+            [[ $word == "$cur"* ]] && COMPREPLY+=("$word")
+        done < <(printf '%s\n' list run new nu providers open switch close path completion install-man; un "${dir[@]}" list 2>/dev/null)
+    elif ((COMP_CWORD == i + 1)); then
+        case ${COMP_WORDS[i]} in
+            run) set -- list ;;
+            open|switch) set -- providers ;;
+            *) return ;;
+        esac
+        while IFS= read -r word; do
+            [[ $word == "$cur"* ]] && COMPREPLY+=("$word")
+        done < <(un "${dir[@]}" "$1" 2>/dev/null)
+    fi
+}
+complete -F _un un
+'''
+
+MAN = r'''.TH UN 1
+.SH NAME
+un \- discover and run commands provided by directories
+.SH SYNOPSIS
+.B un
+.RI [ \-C\ dir ]
+.RI [ command\  [ arg ...]]
+.SH DESCRIPTION
+A directory can have a file named
+.B .@
+with one
+.I name: shell command
+per line. Blank lines and lines starting with # are ignored.
+.B un
+lists the available names, one per line.
+Run one with
+.B un name
+or
+.BR "un run name" .
+Recipes run in the explored directory with sh.
+Use "$@" in a recipe to pass its arguments.
+.B UN_SOURCE
+is the absolute directory containing the recipe's .@ file.
+.PP
+A provider is a directory tree. Each provider can supply a .@ file at the
+same relative path as the explored directory. A .@ at the provider root
+also supplies commands at every path. The local .@ is read first. Providers
+are read in path order, with the open provider first when one is selected.
+Each provider's matching .@ precedes its root .@. The first definition wins.
+.PP
+The relative path is measured from the nearest ancestor whose .@ starts with
+.BR "# un root" .
+Set
+.B UNROOT
+to pick a different root. The filesystem root is used when there is no marker.
+.SH COMMANDS
+.TP
+.B list
+List available commands. This is the default.
+.TP
+.BI "run " "name [arg ...]"
+Run a directory command, including one that shares a built-in name.
+.TP
+.BI "new [" "dir" ]
+Create a universe with a .@ root marker. The alias is
+.BR nu .
+With no directory, use the current one.
+.TP
+.B providers
+List provider roots with a tree for the current directory.
+.TP
+.BI "open [" "provider" ]
+Create a symlink named ... to a provider's directory. Use the first provider
+with a matching tree by default, or name a provider by basename or path.
+.TP
+.BI "switch " provider
+Point ... at a different provider's directory.
+.TP
+.B close
+Remove the ... symlink. The name ... is reserved for this link.
+.TP
+.BI "path [" "pathlist" ]
+Print the effective provider path, or save a colon-separated path for future
+invocations. An empty path disables providers.
+.TP
+.B completion
+Print Bash completion code. Load it with
+.BR "source <(un completion)" .
+.TP
+.BI "install-man [" "manpath-dir" ]
+Install this page under man1 in the first writable directory in MANPATH.
+With no MANPATH entries, use $XDG_DATA_HOME/man or ~/.local/share/man.
+An explicit directory overrides MANPATH.
+.PP
+If a name resolves to neither a built-in nor a directory command,
+.B un name
+looks for an executable named un-name in PATH.
+.SH ENVIRONMENT
+.TP
+.B UNPATH
+Colon-separated provider roots, like PATH. An empty value disables providers.
+When this variable is unset, use the path file in $XDG_CONFIG_HOME/un
+or ~/.config/un if it exists. Use absolute paths to keep the same providers
+when changing directories.
+.TP
+.B UNROOT
+Root from which provider-relative paths are measured.
+.SH EXAMPLES
+.nf
+un new work
+mkdir -p work/doc base/doc
+printf 'read: ls -1 "$@"\en' > base/doc/.@
+export UNPATH="$PWD/base"
+cd work/doc
+un
+un read
+un open
+ls .../
+un close
+.fi
+'''
+
+
+def user_dir(variable, fallback):
+    value = os.environ.get(variable, "")
+    if os.path.isabs(value):
+        return Path(value)
+    home = os.environ.get("HOME", "")
+    if os.path.isabs(home):
+        return Path(home) / fallback
+    return None
+
+
+def path_config():
+    config = user_dir("XDG_CONFIG_HOME", ".config")
+    return config / "un/path" if config else None
+
+
+def provider_path():
+    if "UNPATH" in os.environ:
+        return os.environ["UNPATH"]
+    config = path_config()
+    if config is not None:
+        try:
+            return config.read_text(encoding="utf-8").rstrip("\n")
+        except FileNotFoundError:
+            pass
+    return ""
+
+
+def write_file(path, contents):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory(prefix=".un-", dir=path.parent) as temp:
+        draft = Path(temp) / path.name
+        draft.write_text(contents, encoding="utf-8")
+        draft.replace(path)
+
+
+def is_root(directory):
+    try:
+        with (directory / ".@").open("rb") as file:
+            return file.readline() == MARKER
+    except FileNotFoundError:
+        return False
+
+
+def new(directory):
+    directory.mkdir(parents=True, exist_ok=True)
+    try:
+        with (directory / ".@").open("xb") as file:
+            file.write(MARKER)
+    except FileExistsError:
+        if not is_root(directory):
+            raise ValueError(f"{directory / '.@'} already exists") from None
+
+
+def provider_trees(cwd):
+    root = os.environ.get("UNROOT")
+    if root:
+        root = Path(root).resolve()
+    else:
+        root = next((p for p in (cwd, *cwd.parents) if is_root(p)), Path(cwd.anchor))
+    try:
+        relative = cwd.relative_to(root)
+    except ValueError:
+        raise ValueError(f"{cwd} is outside UNROOT ({root})") from None
+    roots = dict.fromkeys(Path(p).absolute() for p in provider_path().split(":") if p)
+    return [(base, base / relative) for base in roots if base.is_dir()]
+
+
+def read_recipes(directory, recipes):
+    manifest = directory / ".@"
+    try:
+        file = manifest.open(encoding="utf-8")
+    except FileNotFoundError:
+        return
+    with file:
+        for line_number, line in enumerate(file, 1):
+            line = line.strip()
+            if not line or line.startswith("#"):
+                continue
+            name, _, command = line.partition(":")
+            name, command = name.strip(), command.strip()
+            if not name or any(c.isspace() or c in "/#" for c in name) or not command:
+                raise ValueError(f"{manifest}:{line_number}: expected name: shell command")
+            recipes.setdefault(name, (directory, command))
+
+
+def recipes_for(cwd, trees):
+    recipes = {}
+    read_recipes(cwd, recipes)
+    opened = link_target(cwd / "...")
+    for base, tree in sorted(trees, key=lambda pair: pair[1] != opened):
+        if tree != cwd and tree.is_dir():
+            read_recipes(tree, recipes)
+        if base != tree and base != cwd:
+            read_recipes(base, recipes)
+    return recipes
+
+
+def link_target(link):
+    try:
+        return Path(os.readlink(link))
+    except OSError as error:
+        if error.errno in (errno.ENOENT, errno.EINVAL):
+            return None
+        raise
+
+
+def open_tree(link, trees, provider, switch):
+    opened = link_target(link)
+    if opened is not None and provider is None:
+        return
+    if opened is None and link.exists():
+        raise ValueError(f"{link} already exists")
+    chosen = Path(provider).absolute() if provider is not None else None
+    for base, tree in trees:
+        if provider is None or provider == base.name or chosen == base:
+            if tree == opened:
+                return
+            if opened is None:
+                link.symlink_to(tree, target_is_directory=True)
+            elif switch:
+                with tempfile.TemporaryDirectory(prefix=".un-", dir=link.parent) as temp:
+                    draft = Path(temp) / "..."
+                    draft.symlink_to(tree, target_is_directory=True)
+                    draft.replace(link)
+            else:
+                raise ValueError("directory is open; use un switch PROVIDER")
+            return
+    raise ValueError(f"no provider has this directory{f' ({provider})' if provider else ''}")
+
+
+def install_man(destination):
+    if destination is None:
+        places = [Path(p) for p in os.environ.get("MANPATH", "").split(":") if p]
+        if not places:
+            default = user_dir("XDG_DATA_HOME", ".local/share")
+            if default:
+                places = [default / "man"]
+    else:
+        places = [Path(destination)]
+    for place in places:
+        page = place / "man1/un.1"
+        try:
+            write_file(page, MAN)
+        except OSError:
+            if destination is not None:
+                raise
+        else:
+            print(page)
+            return
+    raise ValueError("no writable MANPATH directory")
+
+
+def usage():
+    print(HELP, end="", file=sys.stderr)
+    return 2
+
+
+def main(args):
+    if args[:1] == ["-C"]:
+        if len(args) < 2:
+            return usage()
+        os.chdir(args[1])
+        args = args[2:]
+    command, *args = args or ["list"]
+    if command in ("-h", "--help"):
+        print(HELP, end="")
+    elif command == "completion" and not args:
+        print(COMPLETION, end="")
+    elif command == "install-man" and len(args) <= 1:
+        install_man(next(iter(args), None))
+    elif command in ("new", "nu") and len(args) <= 1:
+        new(Path(next(iter(args), ".")))
+    elif command == "path" and len(args) <= 1:
+        if not args:
+            print(provider_path())
+        else:
+            config = path_config()
+            if config is None:
+                raise ValueError("set XDG_CONFIG_HOME or HOME to an absolute path")
+            if "\n" in args[0] or "\r" in args[0]:
+                raise ValueError("provider path must fit on one line")
+            write_file(config, args[0] + "\n")
+    elif command in ("list", "completion", "install-man", "new", "nu", "path") and args:
+        return usage()
+    else:
+        cwd = Path.cwd()
+        link = cwd / "..."
+        if command == "close":
+            if args:
+                return usage()
+            if link_target(link) is not None:
+                try:
+                    link.unlink()
+                except FileNotFoundError:
+                    pass
+            elif link.exists():
+                raise ValueError(f"{link} is not a symlink")
+        elif command in ("open", "switch", "providers"):
+            if not {"open": len(args) <= 1, "switch": len(args) == 1, "providers": not args}[command]:
+                return usage()
+            trees = [(base, tree) for base, tree in provider_trees(cwd) if tree.is_dir()]
+            if command == "providers":
+                for base, tree in trees:
+                    print(base)
+            else:
+                open_tree(link, trees, next(iter(args), None), command == "switch")
+        else:
+            if command == "run" and not args:
+                return usage()
+            recipes = recipes_for(cwd, provider_trees(cwd))
+            if command == "list":
+                for name in sorted(recipes):
+                    print(name)
+            else:
+                name, *arguments = args if command == "run" else [command, *args]
+                if name in recipes:
+                    source, recipe = recipes[name]
+                    os.environ["UN_SOURCE"] = str(source)
+                    os.execvp("sh", ["sh", "-c", recipe, name, *arguments])
+                if command != "run" and "/" not in name:
+                    try:
+                        os.execvp(f"un-{name}", [f"un-{name}", *arguments])
+                    except FileNotFoundError:
+                        pass
+                print(f"un: unknown command: {name}", file=sys.stderr)
+                return 127
+    return 0
+
+
+if __name__ == "__main__":
+    try:
+        sys.exit(main(sys.argv[1:]))
+    except (OSError, ValueError) as error:
+        sys.exit(f"un: {error}")

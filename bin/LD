@@ -1,3 +1,1 @@
-#!/usr/bin/env sh
-
-echo cat "$@" pipe lordhavemercy -f --verbose
+../lib/LD
