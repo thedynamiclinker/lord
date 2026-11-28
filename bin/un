@@ -9,6 +9,7 @@ import tempfile
 MARKER = b"# un root\n"
 HELP = """usage: un [-C DIR] [list | NAME [ARG ...]]
        un [-C DIR] run NAME [ARG ...]
+       un [-C DIR] show [NAME]
        un [-C DIR] new [DIR]
        un [-C DIR] providers | open [PROVIDER] | switch PROVIDER | close
        un path [PATHLIST]
@@ -16,7 +17,7 @@ HELP = """usage: un [-C DIR] [list | NAME [ARG ...]]
 """
 
 COMPLETION = r'''_un() {
-    local i=1 cur=${COMP_WORDS[COMP_CWORD]} word
+    local i=1 cur=${COMP_WORDS[COMP_CWORD]} executable=${COMP_WORDS[0]} word
     local -a dir=()
     COMPREPLY=()
     if [[ ${COMP_WORDS[1]} == -C ]]; then
@@ -30,16 +31,18 @@ COMPLETION = r'''_un() {
     if ((COMP_CWORD == i)); then
         while IFS= read -r word; do
             [[ $word == "$cur"* ]] && COMPREPLY+=("$word")
-        done < <(printf '%s\n' list run new nu providers open switch close path completion install-man; un "${dir[@]}" list 2>/dev/null)
+        done < <(printf '%s\n' list run show new nu providers open switch close path completion install-man; "$executable" "${dir[@]}" list 2>/dev/null)
     elif ((COMP_CWORD == i + 1)); then
         case ${COMP_WORDS[i]} in
-            run) set -- list ;;
+            run|show) set -- list ;;
             open|switch) set -- providers ;;
             *) return ;;
         esac
         while IFS= read -r word; do
-            [[ $word == "$cur"* ]] && COMPREPLY+=("$word")
-        done < <(un "${dir[@]}" "$1" 2>/dev/null)
+            if [[ $word == "$cur"* || ( $1 == providers && ${word##*/} == "$cur"* ) ]]; then
+                COMPREPLY+=("$word")
+            fi
+        done < <("$executable" "${dir[@]}" "$1" 2>/dev/null)
     fi
 }
 complete -F _un un
@@ -87,6 +90,10 @@ List available commands. This is the default.
 .TP
 .BI "run " "name [arg ...]"
 Run a directory command, including one that shares a built-in name.
+.TP
+.BI "show [" "name" ]"
+Print the selected recipe for a command, or all selected recipes if no name
+is given. The format is the same as in .@ files.
 .TP
 .BI "new [" "dir" ]
 Create a universe with a .@ root marker. The alias is
@@ -355,12 +362,18 @@ def main(args):
             else:
                 open_tree(link, trees, next(iter(args), None), command == "switch")
         else:
-            if command == "run" and not args:
+            if (command == "run" and not args) or (command == "show" and len(args) > 1):
                 return usage()
             recipes = recipes_for(cwd, provider_trees(cwd))
             if command == "list":
                 for name in sorted(recipes):
                     print(name)
+            elif command == "show":
+                if args and args[0] not in recipes:
+                    print(f"un: unknown command: {args[0]}", file=sys.stderr)
+                    return 127
+                for name in args or sorted(recipes):
+                    print(f"{name}: {recipes[name][1]}")
             else:
                 name, *arguments = args if command == "run" else [command, *args]
                 if name in recipes:

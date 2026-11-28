@@ -38,9 +38,18 @@ Whenever I run this prompt, however many times, I want you to:
 Go!
 
 P.S. You crashed last time bc you added shell stuff to THIS file. Don't do that! If needed, just add english to the bottom of this prompt.
+P.P.S. You crashed again! Wtf? Ok I moved the notes down where it's safe. Go!
 
----
+EOF
+
+exit 0
 
 # Add Your Notes Here
 
-EOF
+Read the earlier rounds in etc/answers/un before asking the next questions.
+Keep each round to the decisions that affect the next small working change.
+If the interface only prints a result, print the numbered questions and choices
+so I can put my answers below these notes and run the prompt again. Record each
+answered round once, with my answers as given, before using it to make and verify
+the next change.
+
