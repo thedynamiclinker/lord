@@ -2,21 +2,32 @@
 import errno
 import os
 from pathlib import Path
+import shutil
 import subprocess
 import sys
 import tempfile
 
 
-MARKER = b"# un root\n"
 HELP = """usage: un [-C DIR] [list | NAME [ARG ...]]
        un [-C DIR] run NAME [ARG ...]
        un [-C DIR] show [NAME]
        un [-C DIR] new [DIR]
        un [-C DIR] providers | open [PROVIDER] | switch PROVIDER | close
+       un [-C DIR] {dn | up} [NAME ...]
+       dn [NAME ...] | up [NAME ...]
        un export REPO REF DIR
        un path [PATHLIST]
        un completion | install-man [MANPATH-DIR]
 """
+
+TRANSFER_HELP = {
+    "dn": (
+        "usage: dn [--] [NAME ...]\nList provider entries, or copy the named entries down.\n"
+        "In Bash, load Tab completion with: source <(un completion)"
+    ),
+    "up": "usage: up [--] [NAME ...]\nUpdate entries already in the provider, or send the named entries up.",
+}
+RESERVED = {".git", "..."}
 
 COMPLETION = r'''_un() {
     local i=1 cur=${COMP_WORDS[COMP_CWORD]} executable=${COMP_WORDS[0]} word
@@ -33,7 +44,9 @@ COMPLETION = r'''_un() {
     if ((COMP_CWORD == i)); then
         while IFS= read -r word; do
             [[ $word == "$cur"* ]] && COMPREPLY+=("$word")
-        done < <(printf '%s\n' list run show new nu providers open switch close export path completion install-man; "$executable" "${dir[@]}" list 2>/dev/null)
+        done < <(printf '%s\n' list run show new nu providers open switch close dn up export path completion install-man; "$executable" "${dir[@]}" list 2>/dev/null)
+    elif [[ ${COMP_WORDS[i]} == dn ]]; then
+        _un_dn "$executable" "${dir[@]}" dn
     elif ((COMP_CWORD == i + 1)); then
         case ${COMP_WORDS[i]} in
             run|show) set -- list ;;
@@ -47,63 +60,58 @@ COMPLETION = r'''_un() {
         done < <("$executable" "${dir[@]}" "$1" 2>/dev/null)
     fi
 }
+_un_dn() {
+    local cur=${COMP_WORDS[COMP_CWORD]} word
+    COMPREPLY=()
+    compopt -o filenames
+    while IFS= read -r word; do
+        [[ $word == "$cur"* ]] && COMPREPLY+=("$word")
+    done < <("$@" 2>/dev/null)
+}
+_dn() { _un_dn "${COMP_WORDS[0]}"; }
 complete -F _un un
+complete -F _dn dn
 '''
 
 MAN = r'''.TH UN 1
 .SH NAME
-un \- discover and run commands provided by directories
+un, dn, up \- explore and exchange files with provider directories
 .SH SYNOPSIS
 .B un
 .RI [ \-C\ dir ]
 .RI [ command\  [ arg ...]]
+.br
+.B dn
+.RI [ name\  ...]
+.br
+.B up
+.RI [ name\  ...]
 .SH DESCRIPTION
-A directory can have a file named
-.B .@
-with one
-.I name: shell command
-per line. Blank lines and lines starting with # are ignored.
-.B un
-lists the available names, one per line.
-Run one with
-.B un name
-or
-.BR "un run name" .
-Recipes run in the explored directory with sh.
-Use "$@" in a recipe to pass its arguments.
-.B UN_SOURCE
-is the absolute directory containing the recipe's .@ file.
-To run an English program, make it executable with the shebang
+Use ordinary Makefiles for fixed actions. Put commands that accept arguments
+on PATH as executables named un-name, then run them with
+.BR "un name [arg ...]" .
+An English program can use the shebang
 .B "#!/usr/bin/env LD"
-and put LD on PATH. Its recipe can use
-.B "$UN_SOURCE/program"
-to locate the program.
+when LD is on PATH.
 .PP
-A provider is a directory tree. Each provider can supply a .@ file at the
-same relative path as the explored directory. A .@ at the provider root
-also supplies commands at every path. The local .@ is read first. Providers
-are read in path order, with the open provider first when one is selected.
-Each provider's matching .@ precedes its root .@. The first definition wins.
-.PP
-The relative path is measured from the nearest ancestor whose .@ starts with
-.BR "# un root" .
-Set
+Each provider is a directory tree. Set
 .B UNROOT
-to pick a different root. The filesystem root is used when there is no marker.
+to match subdirectories against the same relative path in each provider.
+With UNROOT unset, each provider maps directly to the current directory.
 .SH COMMANDS
 .TP
 .B list
-List available commands. This is the default.
+List executable un-name extensions on PATH. This is the default.
 .TP
 .BI "run " "name [arg ...]"
-Run a directory command, including one that shares a built-in name.
+Run a PATH extension, including one that shares a built-in name.
 .TP
 .BI "show [" "name" ]"
-Print the selected recipe for a command, or all selected recipes if no name
-is given. The format is the same as in .@ files.
+Print the executable selected for a command, or all extensions and their
+paths if no name is given.
 .TP
 .BI "new [" "dir" ]
-Create a universe with a .@ root marker. The alias is
+Create a directory. The alias is
 .BR nu .
 With no directory, use the current one.
 .TP
@@ -120,6 +128,19 @@ Point ... at a different provider's directory.
 .B close
 Remove the ... symlink. The name ... is reserved for this link.
 .TP
+.BI "dn [" "name ...]"
+List the provider's entries or copy the named entries into the current
+directory. The open ... tree takes precedence over the first matching
+provider on UNPATH. In Bash, press Tab after dn to see those names.
+.TP
+.BI "up [" "name ...]"
+Send local entries back to the same provider. With no names, update paths
+that already exist in the provider. Give names to publish new entries.
+.PP
+The default transfers use rsync, skip .git and ... at every level, and
+keep files missing from the source. Names are entries in the current
+directory. Use \fB--\fR before a name that starts with a hyphen.
+.TP
 .BI "export " "repo ref dir"
 Export a branch, tag, or commit from a local Git repository into a new
 directory. The result is an ordinary provider tree without Git metadata.
@@ -127,48 +148,53 @@ Add its path to UNPATH to use it.
 .TP
 .BI "path [" "pathlist" ]
 Print the effective provider path, or save a colon-separated path for future
-invocations. An empty path disables providers.
+invocations. An empty path skips provider path lookup.
 .TP
 .B completion
-Print Bash completion code. Load it with
+Print Bash completion code for un and dn. Load it with
 .BR "source <(un completion)" .
 .TP
 .BI "install-man [" "manpath-dir" ]
 Install this page under man1 in the first writable directory in MANPATH.
 With no MANPATH entries, use $XDG_DATA_HOME/man or ~/.local/share/man.
 An explicit directory overrides MANPATH.
-.PP
-If a name resolves to neither a built-in nor a directory command,
-.B un name
-looks for an executable named un-name in PATH.
 .SH ENVIRONMENT
 .TP
 .B UNPATH
-Colon-separated provider roots, like PATH. An empty value disables providers.
+Colon-separated provider roots, like PATH. An empty value skips path lookup.
 When this variable is unset, use the path file in $XDG_CONFIG_HOME/un
 or ~/.config/un if it exists. Use absolute paths to keep the same providers
 when changing directories.
 .TP
 .B UNROOT
 Root from which provider-relative paths are measured.
+.TP
+.B UN_SYNC
+Executable to use in place of the default sync. It receives the action
+(list, dn, or up), the absolute local directory, the absolute provider
+directory, and any entry names as separate arguments. For list, print one
+name per line. For up with no names, update previously provided entries.
 .SH EXAMPLES
 .nf
 un new work
 mkdir -p work/doc base/doc
-printf 'read: ls -1 "$@"\en' > base/doc/.@
-export UNPATH="$PWD/base"
-un -C work/doc
-un -C work/doc read
-un -C work/doc open
-ls work/doc/.../
-un -C work/doc close
+printf 'hello\en' > base/doc/README
+export UNROOT="$PWD/work" UNPATH="$PWD/base"
+cd work/doc
+un open
+ls .../
+dn
+dn README
+$EDITOR README
+up README
+un close
 .fi
 .PP
 Use two branches of a bare repository as alternative providers.
 .nf
 un export "$HOME/src/world.git" main stable
 un export "$HOME/src/world.git" next next
-export UNPATH="$PWD/stable:$PWD/next"
+export UNROOT="$PWD/work" UNPATH="$PWD/stable:$PWD/next"
 un -C work/doc providers
 un -C work/doc open stable
 un -C work/doc switch next
@@ -211,66 +237,27 @@ def write_file(path, contents):
         draft.replace(path)
 
 
-def is_root(directory):
-    try:
-        with (directory / ".@").open("rb") as file:
-            return file.readline() == MARKER
-    except FileNotFoundError:
-        return False
-
-
-def new(directory):
-    directory.mkdir(parents=True, exist_ok=True)
-    try:
-        with (directory / ".@").open("xb") as file:
-            file.write(MARKER)
-    except FileExistsError:
-        if not is_root(directory):
-            raise ValueError(f"{directory / '.@'} already exists") from None
-
-
 def provider_trees(cwd):
     root = os.environ.get("UNROOT")
-    if root:
-        root = Path(root).resolve()
-    else:
-        root = next((p for p in (cwd, *cwd.parents) if is_root(p)), Path(cwd.anchor))
+    root = Path(root).resolve() if root else cwd
     try:
         relative = cwd.relative_to(root)
     except ValueError:
         raise ValueError(f"{cwd} is outside UNROOT ({root})") from None
     roots = dict.fromkeys(Path(p).absolute() for p in provider_path().split(":") if p)
-    return [(base, base / relative) for base in roots if base.is_dir()]
+    for base in roots:
+        tree = base / relative
+        if tree.is_dir():
+            yield base, tree
 
 
-def read_recipes(directory, recipes):
-    manifest = directory / ".@"
-    try:
-        file = manifest.open(encoding="utf-8")
-    except FileNotFoundError:
-        return
-    with file:
-        for line_number, line in enumerate(file, 1):
-            line = line.strip()
-            if not line or line.startswith("#"):
-                continue
-            name, _, command = line.partition(":")
-            name, command = name.strip(), command.strip()
-            if not name or any(c.isspace() or c in "/#" for c in name) or not command:
-                raise ValueError(f"{manifest}:{line_number}: expected name: shell command")
-            recipes.setdefault(name, (directory, command))
-
-
-def recipes_for(cwd, trees):
-    recipes = {}
-    read_recipes(cwd, recipes)
-    opened = link_target(cwd / "...")
-    for base, tree in sorted(trees, key=lambda pair: pair[1] != opened):
-        if tree != cwd and tree.is_dir():
-            read_recipes(tree, recipes)
-        if base != tree and base != cwd:
-            read_recipes(base, recipes)
-    return recipes
+def extensions():
+    commands = {}
+    for directory in os.get_exec_path():
+        for executable in Path(directory).glob("un-?*"):
+            if executable.is_file() and os.access(executable, os.X_OK):
+                commands.setdefault(executable.name[3:], executable.absolute())
+    return commands
 
 
 def link_target(link):
@@ -304,6 +291,74 @@ def open_tree(link, trees, provider, switch):
                 raise ValueError("directory is open; use un switch PROVIDER")
             return
     raise ValueError(f"no provider has this directory{f' ({provider})' if provider else ''}")
+
+
+def sync_provider(cwd):
+    opened = link_target(cwd / "...")
+    if opened is not None:
+        tree = cwd / opened
+        if not tree.is_dir():
+            raise ValueError(f"open provider does not exist ({tree})")
+        return tree.resolve()
+    for _, tree in provider_trees(cwd):
+        return tree.resolve()
+    raise ValueError("no provider has this directory; set UNPATH or use un path")
+
+
+def entries(directory):
+    return sorted(entry.name for entry in directory.iterdir() if entry.name not in RESERVED)
+
+
+def transfer(command, args):
+    if args in (["-h"], ["--help"]):
+        print(TRANSFER_HELP[command])
+        print("Uses the open ... tree or the first matching provider. Set providers with un path.")
+        return 0
+    if args[:1] == ["--"]:
+        args = args[1:]
+    elif any(name.startswith("-") for name in args):
+        print(TRANSFER_HELP[command], file=sys.stderr)
+        return 2
+    # Bash may append a slash when a completion is already a local directory.
+    args = [name.rstrip("/") for name in args]
+    for name in args:
+        if name in RESERVED or name in ("", ".", "..") or "/" in name:
+            raise ValueError(f"expected a file or directory name, got {name!r}")
+
+    local = Path.cwd()
+    high = sync_provider(local)
+    action = "list" if command == "dn" and not args else command
+    backend = os.environ.get("UN_SYNC")
+    if backend:
+        os.execvp(backend, [backend, action, str(local), str(high), *args])
+    if action == "list":
+        for name in entries(high):
+            if "\n" not in name:
+                print(name)
+        return 0
+
+    if local == high:
+        raise ValueError("local and provider are the same directory")
+    source, destination = (high, local) if action == "dn" else (local, high)
+    names = args or entries(source)
+    for outer, inner in ((local, high), (high, local)):
+        if outer in inner.parents:
+            nested = inner.relative_to(outer).parts[0]
+            if nested in args:
+                raise ValueError(f"{nested!r} contains the other sync directory")
+            names = [name for name in names if name != nested]
+    for name in args:
+        if not os.path.lexists(source / name):
+            raise FileNotFoundError(errno.ENOENT, "no such entry", source / name)
+    if names:
+        options = ["-ar", "--checksum", "--exclude=.git", "--exclude=...", "--from0", "--files-from=-"]
+        if not args:
+            options.append("--existing")
+        subprocess.run(
+            ["rsync", *options, "--", source, destination],
+            input=b"".join(os.fsencode(name) + b"\0" for name in names), check=True,
+        )
+    return 0
 
 
 def export_tree(repository, ref, destination):
@@ -369,7 +424,9 @@ def main(args):
     elif command == "install-man" and len(args) <= 1:
         install_man(next(iter(args), None))
     elif command in ("new", "nu") and len(args) <= 1:
-        new(Path(next(iter(args), ".")))
+        Path(next(iter(args), ".")).mkdir(parents=True, exist_ok=True)
+    elif command in ("dn", "up"):
+        return transfer(command, args)
     elif command == "export":
         if len(args) != 3:
             return usage()
@@ -402,45 +459,43 @@ def main(args):
         elif command in ("open", "switch", "providers"):
             if not {"open": len(args) <= 1, "switch": len(args) == 1, "providers": not args}[command]:
                 return usage()
-            trees = [(base, tree) for base, tree in provider_trees(cwd) if tree.is_dir()]
+            trees = provider_trees(cwd)
             if command == "providers":
-                for base, tree in trees:
+                for base, _ in trees:
                     print(base)
             else:
                 open_tree(link, trees, next(iter(args), None), command == "switch")
         else:
             if (command == "run" and not args) or (command == "show" and len(args) > 1):
                 return usage()
-            recipes = recipes_for(cwd, provider_trees(cwd))
             if command == "list":
-                for name in sorted(recipes):
+                for name in sorted(extensions()):
                     print(name)
-            elif command == "show":
-                if args and args[0] not in recipes:
-                    print(f"un: unknown command: {args[0]}", file=sys.stderr)
-                    return 127
-                for name in args or sorted(recipes):
-                    print(f"{name}: {recipes[name][1]}")
+            elif command == "show" and not args:
+                commands = extensions()
+                for name in sorted(commands):
+                    print(f"{name}: {commands[name]}")
             else:
-                name, *arguments = args if command == "run" else [command, *args]
-                if name in recipes:
-                    source, recipe = recipes[name]
-                    os.environ["UN_SOURCE"] = str(source)
-                    os.execvp("sh", ["sh", "-c", recipe, name, *arguments])
-                if command != "run" and "/" not in name:
-                    try:
-                        os.execvp(f"un-{name}", [f"un-{name}", *arguments])
-                    except FileNotFoundError:
-                        pass
+                name, *arguments = args if command in ("run", "show") else [command, *args]
+                executable = shutil.which(f"un-{name}") if name and "/" not in name else None
+                if executable:
+                    if command == "show":
+                        print(f"{name}: {Path(executable).absolute()}")
+                        return 0
+                    os.execv(executable, [f"un-{name}", *arguments])
                 print(f"un: unknown command: {name}", file=sys.stderr)
                 return 127
     return 0
 
 
 if __name__ == "__main__":
+    invoked_as = Path(sys.argv[0]).name
+    args = sys.argv[1:]
+    if invoked_as in TRANSFER_HELP:
+        args = [invoked_as, *args]
     try:
-        sys.exit(main(sys.argv[1:]))
+        sys.exit(main(args))
     except subprocess.CalledProcessError as error:
         sys.exit(error.returncode)
     except (OSError, ValueError) as error:
-        sys.exit(f"un: {error}")
+        sys.exit(f"{invoked_as}: {error}")
