@@ -1,0 +1,35 @@
+# /etc/lines
+#
+# The Five Tens
+#
+# Chosen by examining the history
+# of writing since its inception.
+# Based on man himself, the first
+# monospaced two five 10 system.
+#
+#  10  Sumerian cuneiform
+#  20  Babylonian cuneiform
+#  40  Masoretic text
+#  80  Cards, Unix v1-v6
+# 160  Two 80-column fields
+#
+# Approximate historical widths.
+
+
+# Max line lengths for all text
+# in two language. Default: 160.
+# 10
+# 20
+# 40
+# 80
+160
+
+# For more on the We system, see
+#
+# son man
+# men zan
+# hu man
+# un ix
+#
+# Or something like that.
+# We haven't decided yet.
