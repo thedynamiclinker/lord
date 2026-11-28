@@ -1,0 +1,25 @@
+#!/usr/bin/env LD
+
+Read all the new files added in commit b9343d784d95b3a92e998eed78f0c86cca63a205, and try to get the idea of what I'm looking for.
+
+I'm sure the prompt contradicts itself and it surely incomplete, but I don't think we're looking for something difficult or complex here.
+
+I think once we get the right primitives, it'll just WORK, and it'll be super fun to use and feel like old unix plus something like a bsd ports system plus 
+something like bind mounts and/or a system where everything in the system lives in git but there's no more .
+
+git directory anywhere, you just have different distros or branches or something that CAN provide the implementation of a given directory, and directories can 
+also have local (and system wide) abilities that feel like cd'ing into a new repo with a Makefile and just hitting <tab>.
+
+Not the makefiles for building C necessarily, I mean like the Makefiles where each make target is a one word name with a one line implementation.
+
+Like what we were going for in the GEN and TWO files in here.
+
+Also add lib/LD as the generic executor thing for arbitrary english that can be used in shebangs.
+
+I think for now LD is probably just a usr/bin/env -s shebang with lordhavemercy -f, and then we can change /lib/LD to change the default executor strength 
+system wide for all things that use the lord commands.
+
+Implement all that.
+
+Actually let's implement it by looping on the same prompt"
+EOF
