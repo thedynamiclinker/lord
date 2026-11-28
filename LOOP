@@ -36,4 +36,11 @@ Whenever I run this prompt, however many times, I want you to:
    then let's loop on that until the system is good.
 
 Go!
+
+P.S. You crashed last time bc you added shell stuff to THIS file. Don't do that! If needed, just add english to the bottom of this prompt.
+
+---
+
+# Add Your Notes Here
+
 EOF
