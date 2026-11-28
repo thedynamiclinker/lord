@@ -1,0 +1,9 @@
+When a Git branch provides a directory, where should its files live while you explore them?
+Ordinary local trees for now, with Git handled outside un
+
+What should opening a directory change?
+Expose the selected tree at ... and prefer its commands
+
+What should a one-line directory command look like at first?
+Real Make targets in .@, with make interpreting them
+
