@@ -1,10 +1,6 @@
 #!/usr/bin/env bash
-set -euo pipefail
 
-cd -- "$(dirname -- "${BASH_SOURCE[0]}")"
-export PATH="$PWD/bin:$PATH"
-
-prompt=$(cat <<'EOF'
+lordhavemercy -f --verbose << "EOF"
 Read all the new files added in commit b9343d784d95b3a92e998eed78f0c86cca63a205, and try to get the idea of what I'm looking for.
 
 I'm sure the prompt contradicts itself and it surely incomplete, but I don't think we're looking for something difficult or complex here.
@@ -41,68 +37,3 @@ Whenever I run this prompt, however many times, I want you to:
 
 Go!
 EOF
-)
-
-questions=$({
-    printf '%s\n\n' "$prompt"
-    cat <<'EOF'
-This call only prepares the next interview. Read the previous rounds in
-etc/answers/un and inspect what un already implements before choosing what to ask.
-Return only the interview in this format, with no Markdown or extra text.
-The first line is a short lowercase hyphenated slug summarizing the round.
-Then give one to three lines, each with exactly four tab-separated fields:
-the question, the recommended choice, and two other choices.
-EOF
-} | lordhavemercy -i --verbose)
-
-transcript=
-{
-    IFS= read -r topic <&3
-    if [[ ! $topic =~ ^[a-z0-9]+(-[a-z0-9]+)*$ || ${#topic} -gt 64 ]]; then
-        printf 'LOOP: expected a short round name followed by questions\n' >&2
-        exit 1
-    fi
-    while IFS=$'\t' read -r question first second third extra <&3; do
-        if [[ -z $question || -z $first || -z $second || -z $third || -n $extra ]]; then
-            printf 'LOOP: expected a question with three choices\n' >&2
-            exit 1
-        fi
-        printf '\n%s\n  1. %s (recommended)\n  2. %s\n  3. %s\n' \
-            "$question" "$first" "$second" "$third" >&2
-        while :; do
-            printf 'Enter a number or type your own answer. ' >&2
-            IFS= read -r reply || exit 1
-            [[ -n $reply ]] && break
-        done
-        case $reply in
-            1) reply=$first ;;
-            2) reply=$second ;;
-            3) reply=$third ;;
-        esac
-        printf -v transcript '%s%s\n%s\n\n' "$transcript" "$question" "$reply"
-    done
-} 3<<< "$questions"
-
-if [[ -z $transcript ]]; then
-    printf 'LOOP: no questions received\n' >&2
-    exit 1
-fi
-
-answers=etc/answers/un
-mkdir -p -- "$answers"
-round=1
-for path in "$answers"/[0-9][0-9]*-*; do
-    number=${path##*/}
-    number=${number%%-*}
-    if [[ $number =~ ^[0-9]{2,}$ ]] && ((10#$number >= round)); then
-        round=$((10#$number + 1))
-    fi
-done
-printf -v record '%s/%02d-%s' "$answers" "$round" "$topic"
-(set -o noclobber; printf '%s' "$transcript" > "$record")
-
-{
-    printf '%s\n\n' "$prompt"
-    printf 'The interview is complete for this round. Read the answers already saved in %s.\n' "$record"
-    printf '%s\n' 'Use them to take the next small implementation step and verify it.'
-} | lordhavemercy -f --verbose
